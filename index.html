@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LoopLedger</title>
+<meta name="description" content="An open specification for material passports and recovery evidence in the built environment.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one narrow reading column; the hero pairs the thesis with a printed asset tag carrying a real passport event chain. */
+:root {
+  --bg: #eef1ee;
+  --surface: #ffffff;
+  --ink: #15211c;
+  --muted: #55625b;
+  --rule: #c9d1cb;
+  --accent: #1d6b4c;
+  --tag: #e7c84a;
+  --tag-ink: #2a2410;
+  --display: "Big Shoulders Display", "Arial Narrow", "Helvetica Neue", sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101814; --surface: #17221d; --ink: #e3ebe5; --muted: #9aa9a0;
+    --rule: #2b3a33; --accent: #5fbf92; --tag: #d9b93c; --tag-ink: #1d1806;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101814; --surface: #17221d; --ink: #e3ebe5; --muted: #9aa9a0;
+  --rule: #2b3a33; --accent: #5fbf92; --tag: #d9b93c; --tag-ink: #1d1806;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 1.0625rem; line-height: 1.6; }
+.wrap { max-width: 68rem; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+h1, h2 { font-family: var(--display); font-weight: 800; line-height: 1.02; text-wrap: balance; letter-spacing: 0.005em; margin: 0; }
+h1 { font-size: clamp(2.6rem, 6.5vw, 4.6rem); text-transform: uppercase; }
+h2 { font-size: clamp(1.7rem, 3.4vw, 2.4rem); text-transform: uppercase; }
+h3 { font-size: 1.05rem; margin: 0; }
+p { margin: 0; }
+.label { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+
+header.top { padding-block: 1.25rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.mark { font-family: var(--display); font-weight: 800; font-size: 1.5rem; letter-spacing: 0.02em; text-transform: uppercase; color: var(--ink); text-decoration: none; }
+nav { display: flex; gap: 1.25rem; flex-wrap: wrap; font-size: 0.95rem; }
+nav a { color: var(--ink); text-decoration: none; }
+nav a:hover { color: var(--accent); }
+
+.hero { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: clamp(2rem, 5vw, 4rem); align-items: center; padding-block: clamp(2rem, 6vw, 4.5rem); }
+.hero .lede { margin-top: 1.25rem; font-size: 1.2rem; max-width: 34rem; color: var(--muted); }
+.cta { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1.75rem; }
+.btn { display: inline-block; padding: 0.7rem 1.15rem; border: 2px solid var(--ink); color: var(--ink); text-decoration: none; font-weight: 600; }
+.btn.primary { background: var(--ink); color: var(--bg); }
+.btn:hover { border-color: var(--accent); }
+.btn.primary:hover { background: var(--accent); border-color: var(--accent); }
+
+.tag { position: relative; background: var(--tag); color: var(--tag-ink); padding: 1.6rem 1.4rem 1.3rem 2.6rem; clip-path: polygon(14% 0, 100% 0, 100% 100%, 14% 100%, 0 86%, 0 14%); font-family: var(--mono); font-size: 0.8rem; line-height: 1.5; transform: rotate(-1.5deg); }
+.tag::before { content: ""; position: absolute; left: 1.05rem; top: 50%; width: 0.8rem; height: 0.8rem; margin-top: -0.4rem; border-radius: 50%; background: var(--bg); box-shadow: inset 0 0 0 2px var(--tag-ink); }
+.tag .id { font-weight: 600; word-break: break-all; }
+.tag .meta { display: grid; grid-template-columns: auto 1fr; gap: 0.1rem 0.9rem; margin: 0.8rem 0 0.9rem; }
+.tag .meta dt { opacity: 0.7; }
+.tag .meta dd { margin: 0; }
+.tag ol { list-style: none; margin: 0; padding: 0.7rem 0 0; border-top: 1px dashed currentColor; display: grid; gap: 0.3rem; }
+.tag li { display: grid; grid-template-columns: 9.5rem 1fr; gap: 0.6rem; }
+.tag li span:last-child { opacity: 0.75; }
+@media (prefers-reduced-motion: no-preference) { .tag { transition: transform 0.3s ease; } .tag:hover { transform: rotate(0deg); } }
+
+section { padding-block: clamp(2.5rem, 6vw, 4rem); border-top: 1px solid var(--rule); }
+.section-head { display: grid; gap: 0.6rem; margin-bottom: 1.75rem; max-width: 42rem; }
+.section-head p { color: var(--muted); }
+
+.ladder { display: flex; flex-wrap: wrap; gap: 0; margin: 0; padding: 0; list-style: none; font-family: var(--mono); font-size: 0.85rem; }
+.ladder li { padding: 0.55rem 0.9rem; border: 1px solid var(--rule); margin: 0 -1px -1px 0; background: var(--surface); }
+.ladder li:first-child { border-color: var(--accent); color: var(--accent); font-weight: 600; position: relative; z-index: 1; }
+.ladder li.last { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1.75rem 2.25rem; }
+.grid > div { display: grid; gap: 0.4rem; align-content: start; min-width: 0; }
+.grid p { color: var(--muted); font-size: 1rem; }
+
+.drill { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1px; background: var(--rule); border: 1px solid var(--rule); margin-top: 1.5rem; }
+.drill > div { background: var(--surface); padding: 1.1rem 1.25rem; display: grid; gap: 0.35rem; align-content: start; }
+.drill .rev { font-family: var(--display); font-weight: 800; font-size: 2rem; line-height: 1; }
+
+.standards { columns: 2 16rem; column-gap: 2.5rem; margin: 0; padding: 0; list-style: none; }
+.standards li { break-inside: avoid; padding: 0.55rem 0; border-bottom: 1px solid var(--rule); display: grid; gap: 0.1rem; }
+.standards b { font-weight: 600; }
+.standards span { color: var(--muted); font-size: 0.95rem; }
+
+.status { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
+.status > div { background: var(--surface); padding: 1.1rem 1.25rem; display: grid; gap: 0.3rem; align-content: start; }
+.pill { justify-self: start; font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.15rem 0.5rem; border: 1px solid currentColor; }
+.pill.done { color: var(--accent); }
+.pill.open { color: var(--ink); background: var(--tag); border-color: var(--tag); color: var(--tag-ink); }
+.pill.next { color: var(--muted); }
+.status p { color: var(--muted); font-size: 0.97rem; }
+
+footer { border-top: 1px solid var(--rule); padding-block: 2rem 3rem; color: var(--muted); font-size: 0.9rem; display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+
+@media (max-width: 760px) {
+  .hero { grid-template-columns: minmax(0, 1fr); }
+  .tag { transform: none; }
+  .tag li { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .drill { grid-template-columns: minmax(0, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <a class="mark" href="#">LoopLedger</a>
+    <nav aria-label="Primary">
+      <a href="#how">How it works</a>
+      <a href="#standards">Standards</a>
+      <a href="#status">Status</a>
+      <a href="https://github.com/loopledger/loopledger">GitHub</a>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <div>
+      <p class="label">Open specification · Built environment</p>
+      <h1 style="margin-top:0.6rem">Every asset leaves the building with its record.</h1>
+      <p class="lede">LoopLedger is an open specification for material passports and recovery evidence. A passport stays with each fixture, panel and chair through every owner. It records how the item came apart and where it went, signed by both parties at every handoff.</p>
+      <div class="cta">
+        <a class="btn primary" href="https://github.com/loopledger/loopledger/blob/main/packages/spec/REVIEW.md">Review the schema</a>
+        <a class="btn" href="https://github.com/loopledger/loopledger">Read the spec</a>
+      </div>
+    </div>
+
+    <figure class="tag" aria-label="Example passport tag for a booth seat" style="margin:0">
+      <div class="label" style="color:inherit;opacity:0.7">Passport · example fixture</div>
+      <div class="id">booth-seat · 2-seat module</div>
+      <dl class="meta">
+        <dt>revision</dt><dd>G5 · screwed joints</dd>
+        <dt>carrier</dt><dd>GS1 Digital Link QR</dd>
+        <dt>owner</dt><dd>tenant → reseller</dd>
+      </dl>
+      <ol>
+        <li><span>removed</span><span>method, labor, cause</span></li>
+        <li><span>processed</span><span>separated at joints</span></li>
+        <li><span>weighed</span><span>fractions by material</span></li>
+        <li><span>record_transferred</span><span>signed by both</span></li>
+        <li><span>disposition_final</span><span>resale</span></li>
+      </ol>
+    </figure>
+  </div>
+</div>
+
+<section id="how">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="label">Routing</p>
+      <h2>Disposal is the last rung</h2>
+      <p>Before demolition starts, each asset is routed down a fixed ladder. Explicit, versioned rules pick the destination, and every routing decision cites the rule version that governed it.</p>
+    </div>
+    <ol class="ladder" aria-label="Recovery ladder, most preferred first">
+      <li>redeploy</li><li>remanufacture</li><li>resale</li><li>donate</li><li>recycle</li><li class="last">disposal</li>
+    </ol>
+
+    <div class="grid" style="margin-top:2.75rem">
+      <div>
+        <h3>Append-only passports</h3>
+        <p>Identity, components, composition, condition and custody. Built on GS1 EPCIS 2.0 events, so nothing is overwritten and nothing is backfilled.</p>
+      </div>
+      <div>
+        <h3>Two-party custody</h3>
+        <p>Every handoff is signed by both sender and receiver, with photos, scale tickets and manifests. Diversion figures come from weighed, signed events, never from self-reported totals.</p>
+      </div>
+      <div>
+        <h3>Jurisdiction rules as code</h3>
+        <p>Local requirements become versioned rules that limit where each asset can go at each site.</p>
+      </div>
+      <div>
+        <h3>Feedback to design</h3>
+        <p>Recovery outcomes are measured for each design revision and each joint. The results flow back to manufacturers, and to IFC and bSDD for the design tools.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <p class="label">The drill</p>
+      <h2>Which revision came apart better, and why?</h2>
+      <p>The repository includes a synthetic drill. One catalog item in two revisions runs through removal, separation and weighing. The drill compares results within a life band, so the older revision's age isn't counted against its joints.</p>
+    </div>
+    <div class="drill">
+      <div>
+        <span class="label">Revision</span>
+        <span class="rev">G4</span>
+        <p>Bonded upholstery. Deliberately older assets in the fixture set.</p>
+      </div>
+      <div>
+        <span class="label">Revision</span>
+        <span class="rev">G5</span>
+        <p>Mechanically fastened. The bonded joint should account for the difference.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="standards">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="label">Alignment</p>
+      <h2>Built on existing standards</h2>
+      <p>Where an open standard already exists, LoopLedger uses it instead of inventing a rival format.</p>
+    </div>
+    <ul class="standards">
+      <li><b>Events</b><span>GS1 EPCIS 2.0 and CBV 2.0 (ISO/IEC 19987, 19988)</span></li>
+      <li><b>Passports</b><span>UNTP Digital Product Passport; EU DPP under ESPR</span></li>
+      <li><b>Identifiers</b><span>ISO/IEC 15459, carried as GS1 Digital Link</span></li>
+      <li><b>Design data</b><span>IFC and bSDD; EPD data per ISO 22057</span></li>
+      <li><b>Carbon</b><span>EN 15804 EPDs, with measured end-of-life data for modules C and D</span></li>
+      <li><b>Circularity</b><span>ISO 20887 for design for disassembly; ISO 59020</span></li>
+    </ul>
+  </div>
+</section>
+
+<section id="status">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="label">Status</p>
+      <h2>Phase 0, under review</h2>
+      <p>Each phase starts only after the previous gate passes. The current gate is an external review of the passport schema.</p>
+    </div>
+    <div class="status">
+      <div><span class="pill done">Done</span><h3>Schema v0.1</h3><p>JSON-LD passport and event schemas, with a validation suite.</p></div>
+      <div><span class="pill done">Done</span><h3>Vocabularies v0.1</h3><p>Joint type, material and cause, mapped to bSDD classes where they exist.</p></div>
+      <div><span class="pill open">Open</span><h3>G0 review</h3><p>Reviewers from EPCIS/UNTP, BIM/design data and EPD/LCA practice. <a href="https://github.com/loopledger/loopledger/blob/main/packages/spec/REVIEW.md">Read the brief</a>.</p></div>
+      <div><span class="pill next">Next</span><h3>Phase 1</h3><p>One real recovery event run end to end, producing a verified diversion report.</p></div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap">
+  <footer>
+    <span>LoopLedger · Spec and vocabularies under the Community Specification License 1.0</span>
+    <a href="https://github.com/loopledger/loopledger/issues">Open an issue</a>
+  </footer>
+</div>
+</body>
+</html>
