@@ -21,6 +21,10 @@ const write = (path, text) => { mkdirSync(join(path, ".."), { recursive: true })
 const schemaDir = join(src, "packages/spec/schema");
 mkdirSync(`schema/${VERSION}`, { recursive: true });
 for (const f of readdirSync(schemaDir)) copyFileSync(join(schemaDir, f), `schema/${VERSION}/${f}`);
+const schemaFiles = readdirSync(schemaDir).sort();
+write(`schema/${VERSION}/index.html`, page(`Schema ${VERSION}`, `<h1>LoopLedger schema ${VERSION}</h1>
+<ul>${schemaFiles.map((f) => `<li><a href="${esc(f)}"><code>${esc(f)}</code></a></li>`).join("")}</ul>
+<p>Namespace: <a href="/ns/${VERSION}"><code>/ns/${VERSION}</code></a>. Source: <a href="https://github.com/loopledger/loopledger/tree/main/packages/spec">packages/spec</a>.</p>`));
 
 write(`ns/${VERSION}/index.html`, page(`Namespace ${VERSION}`, `<h1>LoopLedger namespace ${VERSION}</h1>
 <p>Terms in <code>https://loopledger.org/ns/${VERSION}#</code> are defined by the JSON-LD context
