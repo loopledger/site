@@ -5,7 +5,6 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
-  pages: write
 concurrency:
   group: sync
   cancel-in-progress: false
@@ -23,14 +22,10 @@ jobs:
         with:
           node-version: 22
       - run: node scripts/build.mjs .src
-      - name: Commit and rebuild Pages if anything changed
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Commit if anything changed
         run: |
           git add schema ns vocab
           if git diff --cached --quiet; then echo "no change"; exit 0; fi
           git -c user.name=github-actions[bot] -c user.email=41898282+github-actions[bot]@users.noreply.github.com \
             commit -m "site: sync schema and vocabularies from loopledger/loopledger@$(git -C .src rev-parse --short HEAD)"
           git push
-          # A push made with GITHUB_TOKEN may not start a Pages build on its own.
-          gh api -X POST "repos/$GITHUB_REPOSITORY/pages/builds"
