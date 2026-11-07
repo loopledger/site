@@ -1,0 +1,12 @@
+{
+  "name": "LoopLedger capture (pilot)",
+  "short_name": "Capture",
+  "description": "Offline crew capture for one pilot event. Pilot data is test data, not evidence.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#14532d",
+  "icons": [{ "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
