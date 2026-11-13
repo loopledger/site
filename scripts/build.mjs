@@ -1,6 +1,7 @@
 // Copies the published schema and vocabularies from a loopledger checkout so their IRIs resolve on loopledger.org.
 // Usage: node scripts/build.mjs <path-to-loopledger>
 import { readFileSync, writeFileSync, mkdirSync, copyFileSync, readdirSync } from "node:fs";
+import { marked } from "marked";
 import { join } from "node:path";
 
 const src = process.argv[2];
@@ -18,13 +19,17 @@ a{color:#1d6b4c}code{font:0.9em ui-monospace,Menlo,monospace}table{border-collap
 `;
 const write = (path, text) => { mkdirSync(join(path, ".."), { recursive: true }); writeFileSync(path, text); };
 
+// Renders the spec prose (packages/spec/README.md) to /spec/v0.1/ as static HTML.
+const specMd = readFileSync(join(src, "packages/spec/README.md"), "utf8");
+write(`spec/${VERSION}/index.html`, page(`Spec ${VERSION}`, marked.parse(specMd, { async: false })));
+
 const schemaDir = join(src, "packages/spec/schema");
 mkdirSync(`schema/${VERSION}`, { recursive: true });
 for (const f of readdirSync(schemaDir)) copyFileSync(join(schemaDir, f), `schema/${VERSION}/${f}`);
 const schemaFiles = readdirSync(schemaDir).sort();
 write(`schema/${VERSION}/index.html`, page(`Schema ${VERSION}`, `<h1>LoopLedger schema ${VERSION}</h1>
 <ul>${schemaFiles.map((f) => `<li><a href="${esc(f)}"><code>${esc(f)}</code></a></li>`).join("")}</ul>
-<p>Namespace: <a href="/ns/${VERSION}"><code>/ns/${VERSION}</code></a>. Source: <a href="https://github.com/loopledger/loopledger/tree/main/packages/spec">packages/spec</a>.</p>`));
+<p>Spec prose: <a href="/spec/v0.1/"><code>/spec/v0.1/</code></a>. Namespace: <a href="/ns/${VERSION}"><code>/ns/${VERSION}</code></a>. Source: <a href="https://github.com/loopledger/loopledger/tree/main/packages/spec">packages/spec</a>.</p>`));
 
 write(`ns/${VERSION}/index.html`, page(`Namespace ${VERSION}`, `<h1>LoopLedger namespace ${VERSION}</h1>
 <p>Terms in <code>https://loopledger.org/ns/${VERSION}#</code> are defined by the JSON-LD context

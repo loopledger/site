@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spec v0.1 · LoopLedger</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="icon" href="/favicon.ico" sizes="32x32">
+<style>body{font:16px/1.6 system-ui,sans-serif;max-width:46rem;margin:0 auto;padding:2rem max(16px,env(safe-area-inset-left,0px));color:#15211c;background:#eef1ee}
+a{color:#1d6b4c}code{font:0.9em ui-monospace,Menlo,monospace}table{border-collapse:collapse;width:100%}td,th{text-align:left;padding:.35rem .5rem;border-bottom:1px solid #c9d1cb;vertical-align:top}
+@media (prefers-color-scheme:dark){body{color:#e3ebe5;background:#101814}a{color:#5fbf92}td,th{border-color:#2b3a33}}</style></head>
+<body><p><a href="/">LoopLedger</a></p><h1>@loopledger/spec</h1>
+<p>Passport and event schema v0.1: JSON Schema (draft 2020-12) plus a JSON-LD context, example passports, and a validation suite (<code>pnpm test</code>).</p>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Contents</th>
+<th>License (LL-002)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>schema/</code>, <code>examples/</code></td>
+<td>schemas, context, examples</td>
+<td>Community Specification License 1.0</td>
+</tr>
+<tr>
+<td><code>src/</code>, <code>test/</code></td>
+<td>the signer table and the suite</td>
+<td>Apache-2.0</td>
+</tr>
+</tbody></table>
+<ul>
+<li><code>schema/passport.schema.json</code> is the identity record, with the party, carrier, revision, lifecycle and data-grant shapes under <code>$defs</code>.</li>
+<li><code>schema/event.schema.json</code> is the envelope, a typed payload per event type, and the invariants.</li>
+<li><code>src/signers.ts</code> exports <code>REQUIRED_SIGNERS</code>, the one table of signers per event type. #7 imports it; a test fails if the schema&#39;s counts differ.</li>
+<li>Alignment: UNTP DPP 0.7.0 (named in <code>schema/context.jsonld</code>; 1.0 was not confirmed released). Carrier and identifier follow ISO/IEC 15459 and EN 18219–18222.</li>
+<li>Joint-type, material and cause fields are term IRIs checked for shape only. #18 adds the membership check.</li>
+</ul>
+<h2>Signatures</h2>
+<p>A signature object (<code>$defs/signature</code> in <code>schema/event.schema.json</code>, used by events and data grants) carries <code>sig_id</code>, <code>party_id</code>, <code>key_id</code>, <code>alg</code>, <code>signed_hash</code>, <code>signed_at</code>, <code>role_at_signing</code> and <code>signature</code>. <code>signature</code> is a detached JWS (RFC 7515 App. F) with <code>alg</code> <code>EdDSA</code> (Ed25519, RFC 8037) and is the authoritative value. An independent implementation signs and verifies as follows.</p>
+<ol>
+<li><strong>Subject.</strong> For an event, the event as a JSON object without <code>signatures</code> and <code>held</code>, so <code>@context</code>, <code>@type</code>, <code>evidence</code> and every other member are included. For a data grant, the grant without <code>signatures</code>, with an empty list of evidence hashes.</li>
+<li><strong>Canonical form.</strong> JCS, RFC 8785: members sorted by UTF-16 code unit, no whitespace, strings and numbers as ECMAScript serialises them. JCS is the only canonical form: the signing payload, <code>signed_hash</code> and the Merkle leaf (the JCS of the event without <code>signatures</code> and <code>held</code>, hashed as <code>SHA-256(0x00 || bytes)</code>) all use it.</li>
+<li><strong>Payload.</strong> The JCS of the object <code>{&quot;event&quot;: &lt;subject&gt;, &quot;evidence_hashes&quot;: &lt;sorted content_hash values of the event&#39;s evidence, [] when none&gt;, &quot;party_id&quot;, &quot;role_at_signing&quot;, &quot;signed_at&quot;}</code>, the last three taken from the signature object. A relayed signature row can&#39;t change the party, role or time.</li>
+<li><strong>Protected header.</strong> The JCS of <code>{&quot;alg&quot;: &lt;alg&gt;, &quot;kid&quot;: &lt;key_id&gt;}</code>, so <code>{&quot;alg&quot;:&quot;EdDSA&quot;,&quot;kid&quot;:&quot;did:key:z6Mk…&quot;}</code>. <code>alg</code> and <code>kid</code> must equal the signature object&#39;s <code>alg</code> and <code>key_id</code>; the header carries nothing else.</li>
+<li><strong>Signing input.</strong> <code>BASE64URL(header) . BASE64URL(payload)</code> as ASCII, base64url without padding (RFC 7515 §5.1). The signature is Ed25519 (RFC 8032) over those bytes.</li>
+<li><strong>Value.</strong> <code>signature</code> is <code>BASE64URL(header)</code> + <code>..</code> + <code>BASE64URL(signature bytes)</code>: the compact JWS with the payload part left empty (the detached form).</li>
+<li><strong>Convenience digest.</strong> <code>signed_hash</code> is <code>sha256:&lt;hex&gt;</code> of the JCS of <code>{&quot;event&quot;: &lt;subject&gt;, &quot;evidence_hashes&quot;: [...]}</code>. It is not the signed value: a verifier recomputes the payload and checks the JWS.</li>
+<li><strong>Key.</strong> In the examples <code>key_id</code> is a <code>did:key</code> (multibase <code>z</code>, base58btc of the multicodec <code>0xed01</code> and the 32-byte Ed25519 public key). The example keys are derived from each <code>party_id</code> by <code>scripts/sign-examples.ts</code>, which re-signs the examples.</li>
+</ol>
+<p>The legacy string <code>Ed25519</code> is not an <code>alg</code>. The VC-JOSE-COSE envelope that wraps an event or a passport is the next section.</p>
+<h2>VC-JOSE-COSE envelope</h2>
+<p>An event, and the passport, export as a W3C VCDM 2.0 credential secured with VC-JOSE-COSE, read at UNTP 0.7.0 (the release that goes with the DPP 0.7.0 alignment target; only the shape of the profile is taken from it). <code>src/vc.ts</code> builds and checks the credential; <code>packages/ledger</code> signs it.</p>
+<pre><code class="language-json">{
+  &quot;@context&quot;: [&quot;https://www.w3.org/ns/credentials/v2&quot;, &quot;https://loopledger.org/schema/v0.1/context.jsonld&quot;],
+  &quot;type&quot;: [&quot;VerifiableCredential&quot;, &quot;Event&quot;],
+  &quot;issuer&quot;: &quot;did:web:example.org&quot;,
+  &quot;validFrom&quot;: &quot;2026-11-08T10:00:00Z&quot;,
+  &quot;credentialSubject&quot;: { &quot;…&quot;: &quot;the event, verbatim&quot; }
+}
+</code></pre>
+<ol>
+<li><strong>Shape.</strong> <code>@context</code> is the VC v2 context then ours, in that order; ours redefines no protected term (REQ-SPEC-001). <code>type</code> is <code>[&quot;VerifiableCredential&quot;, &quot;Event&quot;]</code> or <code>[&quot;VerifiableCredential&quot;, &quot;Passport&quot;]</code>. <code>validFrom</code> is the export time, an RFC 3339 date-time.</li>
+<li><strong>Subject.</strong> <code>credentialSubject</code> is the event or the passport exactly as stored, including its own <code>@context</code>, <code>@type</code> and <code>signatures</code>. The detached JWS signatures above are not touched and verify against the subject as they do against the bare event (REQ-EVENT-012, REQ-EVENT-013).</li>
+<li><strong>Securing.</strong> A new issuer JWS secures the whole credential, media type <code>application/vc+jwt</code>: a compact JWS whose protected header is <code>{&quot;alg&quot;:&quot;EdDSA&quot;,&quot;cty&quot;:&quot;vc&quot;,&quot;kid&quot;:&lt;verification method&gt;,&quot;typ&quot;:&quot;vc+jwt&quot;}</code> and whose payload is the credential, both as JCS (RFC 8785), base64url without padding. The signature is Ed25519 over <code>BASE64URL(header) . BASE64URL(payload)</code>. This is the issuer&#39;s signature, distinct from the event signers&#39; signatures inside the subject, which sign a different payload.</li>
+<li><strong>Issuer.</strong> <code>issuer</code> is the <code>did:web</code> of the tenant exporting the credential, never an event signer, so an event with two signers still has one issuer. Which <code>did:web</code> a tenant uses is the deployment&#39;s configuration. The examples use <code>did:web:example.org</code>, which has no hosted <code>did.json</code> and no real key.</li>
+<li><strong>Resolution.</strong> <code>did:web:host[:path…]</code> resolves to <code>https://host/[path/…]did.json</code>, and <code>did:web:host</code> with no path to <code>https://host/.well-known/did.json</code>; <code>%3A</code> in the host is a port. The issuer JWS <code>kid</code> is a DID URL <code>&lt;issuer&gt;#&lt;fragment&gt;</code> naming a verification method in that document; a verifier fetches the document, finds the method and uses its Ed25519 public key (<code>publicKeyJwk</code>, <code>crv</code> <code>Ed25519</code>).</li>
+<li><strong>Relation to <code>did:key</code>.</strong> The event signers&#39; <code>key_id</code> stays a <code>did:key</code> (item 8 above). The issuer key is a different key under a <code>did:web</code>: a signer&#39;s key never secures a credential, and the issuer key never signs an event.</li>
+</ol>
+<p>The real <code>did:web</code> domain and who holds its key are decided after the fiscal host (#9) and before any real signed event.</p>
+<h2>EPCIS 2.0 export mapping</h2>
+<p>The exporter is out of scope; this is the mapping it follows (<code>docs/kickoff/SPEC-data-model.md</code> §6).</p>
+<table>
+<thead>
+<tr>
+<th>Ours</th>
+<th>EPCIS 2.0</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>observed</code>, <code>weighed</code>, <code>telemetry</code></td>
+<td>ObjectEvent (<code>bizStep: inspecting</code>…)</td>
+</tr>
+<tr>
+<td><code>custody_transferred</code></td>
+<td>ObjectEvent, <code>bizStep: shipping/receiving</code>, <code>action: OBSERVE</code>, source/destination party lists</td>
+</tr>
+<tr>
+<td>lot assets (<code>kind: lot</code>)</td>
+<td>QuantityElement</td>
+</tr>
+<tr>
+<td><code>processed</code></td>
+<td>TransformationEvent; <code>separate</code> maps assembly to component passports</td>
+</tr>
+<tr>
+<td><code>maintained</code></td>
+<td>ObjectEvent, <code>bizStep: repairing</code></td>
+</tr>
+<tr>
+<td><code>record_transferred</code></td>
+<td>ObjectEvent with <code>owning_party</code> source/destination</td>
+</tr>
+<tr>
+<td><code>disposition_final</code></td>
+<td>ObjectEvent with CBV <code>disposition</code> (<code>recycled</code>, <code>disposed</code>…); reuse families in our namespace. One entry per line: its <code>route</code> picks the value (<code>recycle</code> recycled, <code>disposal</code> disposed, <code>recovery</code> its own value); a regional code in <code>classification</code> is not read</td>
+</tr>
+<tr>
+<td><code>route_*</code>, <code>gate_passed</code>, <code>exception_*</code>, <code>rule_version_applied</code></td>
+<td>extension fields in our JSON-LD context</td>
+</tr>
+<tr>
+<td><code>signatures</code>, <code>evidence</code></td>
+<td>detached JOSE signatures and a hash list in the extension block</td>
+</tr>
+<tr>
+<td><code>occurred_at</code>, <code>recorded_at</code></td>
+<td><code>eventTime</code>, <code>recordTime</code></td>
+</tr>
+</tbody></table>
+</body></html>
