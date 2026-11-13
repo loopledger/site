@@ -1,0 +1,15 @@
+{
+  "name": "loopledger-site",
+  "private": true,
+  "description": "Build tooling for loopledger.org (scripts/build.mjs).",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs .src"
+  },
+  "engines": {
+    "node": "22"
+  },
+  "dependencies": {
+    "marked": "18.1.2"
+  }
+}
